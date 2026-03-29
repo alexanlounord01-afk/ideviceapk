@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iDevise — Trade-In Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f; --surface: #111118; --card: #16161f; --border: #252535;
+    --accent: #6c63ff; --accent2: #00e5b4; --warn: #ffb547; --danger: #ff4d6d;
+    --good: #00e5b4; --text: #f0f0f8; --muted: #6b6b8a;
+    --font: 'Syne', sans-serif; --mono: 'JetBrains Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; padding: 24px 16px 48px; }
+
+  header { text-align: center; margin-bottom: 36px; }
+  .logo { font-size: 13px; font-family: var(--mono); color: var(--accent2); letter-spacing: 4px; text-transform: uppercase; margin-bottom: 8px; }
+  h1 { font-size: clamp(28px, 6vw, 42px); font-weight: 800; letter-spacing: -1px; background: linear-gradient(135deg, #f0f0f8 30%, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .subtitle { color: var(--muted); font-size: 14px; margin-top: 6px; font-family: var(--mono); }
+
+  .tabs { display: flex; gap: 8px; max-width: 640px; margin: 0 auto 28px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 4px; }
+  .tab { flex: 1; padding: 10px; border: none; border-radius: 9px; background: transparent; color: var(--muted); font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .tab.active { background: var(--accent); color: #fff; }
+
+  .form-wrap { max-width: 640px; margin: 0 auto; }
+  .section { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  .section-title { font-size: 11px; font-family: var(--mono); color: var(--accent2); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+
+  .field { margin-bottom: 14px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+  input[type="number"], select {
+    width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px;
+    color: var(--text); font-family: var(--mono); font-size: 14px; padding: 10px 14px;
+    outline: none; transition: border-color 0.2s; -webkit-appearance: none; appearance: none;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  select option { background: var(--card); }
+
+  .auto-badge { font-size: 10px; color: var(--accent2); margin-left: 6px; font-family: var(--mono); letter-spacing: 1px; }
+
+  .battery-wrap { display: flex; align-items: center; gap: 14px; }
+  input[type="range"] { flex: 1; -webkit-appearance: none; height: 4px; border-radius: 4px; background: var(--border); outline: none; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--bg); }
+  .battery-val { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--accent2); min-width: 44px; text-align: right; }
+
+  .toggle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .toggle-item { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 10px 14px; cursor: pointer; transition: border-color 0.2s; user-select: none; }
+  .toggle-item:hover { border-color: var(--accent); }
+  .toggle-item.active-danger { border-color: var(--danger); background: rgba(255,77,109,0.08); }
+  .toggle-item.active-danger .toggle-label { color: var(--danger); }
+  .toggle-item.active-warn { border-color: var(--warn); background: rgba(255,181,71,0.08); }
+  .toggle-item.active-warn .toggle-label { color: var(--warn); }
+  .toggle-label { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .toggle-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); transition: all 0.2s; flex-shrink: 0; }
+  .active-danger .toggle-dot { background: var(--danger); border-color: var(--danger); }
+  .active-warn .toggle-dot { background: var(--warn); border-color: var(--warn); }
+
+  .btn-calc { width: 100%; padding: 16px; background: var(--accent); color: #fff; border: none; border-radius: 12px; font-family: var(--font); font-size: 16px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; letter-spacing: 0.5px; margin-top: 8px; }
+  .btn-calc:hover { opacity: 0.9; }
+  .btn-calc:active { transform: scale(0.98); }
+
+  #result-panel { display: none; max-width: 640px; margin: 24px auto 0; animation: slideUp 0.35s ease; }
+  @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
+  .result-main { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px 20px; margin-bottom: 12px; text-align: center; }
+  .result-label { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 8px; }
+  .result-value { font-size: clamp(36px, 10vw, 56px); font-weight: 800; letter-spacing: -2px; line-height: 1; }
+  .result-value.good { color: var(--good); } .result-value.warn { color: var(--warn); } .result-value.danger { color: var(--danger); }
+
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .result-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
+  .rc-label { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+  .rc-value { font-size: 22px; font-weight: 700; }
+
+  .decision-badge { display: inline-block; padding: 8px 20px; border-radius: 99px; font-size: 13px; font-weight: 700; font-family: var(--mono); letter-spacing: 2px; margin-top: 10px; }
+  .badge-excellent { background: rgba(0,229,180,0.15); color: var(--good); border: 1px solid var(--good); }
+  .badge-verygood  { background: rgba(0,229,180,0.10); color: var(--good); border: 1px solid rgba(0,229,180,0.4); }
+  .badge-good      { background: rgba(108,99,255,0.15); color: var(--accent); border: 1px solid var(--accent); }
+  .badge-risky     { background: rgba(255,181,71,0.12); color: var(--warn); border: 1px solid var(--warn); }
+  .badge-reject    { background: rgba(255,77,109,0.12); color: var(--danger); border: 1px solid var(--danger); }
+
+  .risk-bar-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; }
+  .risk-bar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .risk-bar-title { font-size: 12px; font-family: var(--mono); color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+  .risk-track { height: 6px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .risk-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+
+  .breakdown { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; }
+  .breakdown-title { font-size: 11px; font-family: var(--mono); color: var(--muted); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 14px; }
+  .bd-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+  .bd-row:last-child { border-bottom: none; }
+  .bd-val { font-family: var(--mono); color: var(--text); font-weight: 500; }
+  .bd-val.neg { color: var(--danger); } .bd-val.pos { color: var(--good); }
+
+  .alerts { background: rgba(255,77,109,0.07); border: 1px solid rgba(255,77,109,0.25); border-radius: 12px; padding: 14px 16px; font-size: 13px; color: var(--danger); font-family: var(--mono); line-height: 1.8; }
+  .alerts-title { font-weight: 600; margin-bottom: 6px; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; }
+
+  footer { text-align: center; margin-top: 40px; font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">◆ iDevise</div>
+  <h1>Trade-In Calculator</h1>
+  <div class="subtitle">Algorithme v2 — Évaluation professionnelle</div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchMode('tradein')">🔄 Trade-In</button>
+  <button class="tab" onclick="switchMode('opportunity')">💰 Opportunité</button>
+</div>
+
+<!-- TRADE-IN -->
+<div class="form-wrap" id="form-tradein">
+  <div class="section">
+    <div class="section-title">◆ Appareil donné</div>
+    <div class="field">
+      <label>Modèle iPhone</label>
+      <select id="model_select" onchange="onModelChange()">
+        <option value="">— Sélectionner un modèle —</option>
+        <option value="XR">iPhone XR</option>
+        <option value="11">iPhone 11</option>
+        <option value="11Pro">iPhone 11 Pro</option>
+        <option value="11ProMax">iPhone 11 Pro Max</option>
+        <option value="12">iPhone 12</option>
+        <option value="12Pro">iPhone 12 Pro</option>
+        <option value="12ProMax">iPhone 12 Pro Max</option>
+        <option value="13">iPhone 13</option>
+        <option value="13Pro">iPhone 13 Pro</option>
+        <option value="13ProMax">iPhone 13 Pro Max</option>
+        <option value="14">iPhone 14</option>
+        <option value="14Plus">iPhone 14 Plus</option>
+        <option value="14Pro">iPhone 14 Pro</option>
+        <option value="14ProMax">iPhone 14 Pro Max</option>
+        <option value="15">iPhone 15</option>
+        <option value="15Plus">iPhone 15 Plus</option>
+        <option value="15Pro">iPhone 15 Pro</option>
+        <option value="15ProMax">iPhone 15 Pro Max</option>
+        <option value="16">iPhone 16</option>
+        <option value="16Plus">iPhone 16 Plus</option>
+        <option value="16Pro">iPhone 16 Pro</option>
+        <option value="16ProMax">iPhone 16 Pro Max</option>
+        <option value="17">iPhone 17</option>
+        <option value="17Air">iPhone 17 Air</option>
+        <option value="17Pro">iPhone 17 Pro</option>
+        <option value="17ProMax">iPhone 17 Pro Max</option>
+      </select>
+    </div>
+    <div class="field" id="storage-field" style="display:none">
+      <label>Stockage</label>
+      <select id="storage_select" onchange="onStorageChange()">
+        <option value="">— Sélectionner —</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Valeur marché (USD $) <span id="auto-badge" class="auto-badge" style="display:none">● AUTO</span></label>
+      <input type="number" id="base_value" placeholder="Ex: 750" min="0">
+    </div>
+    <div class="field">
+      <label>Batterie — <span id="bat-pct">85</span>%</label>
+      <div class="battery-wrap">
+        <input type="range" id="battery" min="1" max="100" value="85" oninput="document.getElementById('bat-pct').textContent=this.value;document.getElementById('bat-val').textContent=this.value+'%'">
+        <span class="battery-val" id="bat-val">85%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">◆ État physique</div>
+    <div class="toggle-grid">
+      <div class="toggle-item" onclick="tog(this,'screen_damage','danger')"><span class="toggle-label">Écran endommagé</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'camera_damage','danger')"><span class="toggle-label">Caméra endommagée</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'back_damage','danger')"><span class="toggle-label">Dos endommagé</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'water_damage','danger')"><span class="toggle-label">Dégât d'eau</span><div class="toggle-dot"></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">⚠️ Problèmes spéciaux</div>
+    <div class="toggle-grid">
+      <div class="toggle-item" onclick="tog(this,'face_id','warn')"><span class="toggle-label">Face ID cassé</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'touch_id','warn')"><span class="toggle-label">Touch ID cassé</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'charge_port','warn')"><span class="toggle-label">Port de charge</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'speaker','warn')"><span class="toggle-label">Haut-parleur</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'motherboard','danger')"><span class="toggle-label">Carte mère 🚫</span><div class="toggle-dot"></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">◆ Historique & réseau</div>
+    <div class="toggle-grid" style="margin-bottom:12px">
+      <div class="toggle-item" onclick="tog(this,'is_opened','danger')"><span class="toggle-label">Appareil ouvert</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'bat_replaced','danger')"><span class="toggle-label">Batterie remplacée</span><div class="toggle-dot"></div></div>
+    </div>
+    <div style="font-size:11px;font-family:var(--mono);color:var(--accent2);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;margin-top:4px;">🔩 Pièces non-originales</div>
+    <div class="toggle-grid" style="margin-bottom:12px">
+      <div class="toggle-item" onclick="tog(this,'part_screen','warn')"><span class="toggle-label">Écran non-original</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'part_battery','warn')"><span class="toggle-label">Batterie non-originale</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'part_camera','warn')"><span class="toggle-label">Caméra non-originale</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'part_back','warn')"><span class="toggle-label">Vitre arrière non-orig.</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'part_charging','warn')"><span class="toggle-label">Port charge non-orig.</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'part_faceid','warn')"><span class="toggle-label">Face ID non-original</span><div class="toggle-dot"></div></div>
+    </div>
+    <div class="field">
+      <label>Statut réseau</label>
+      <select id="network_status">
+        <option value="clean">✅ Clean (déverrouillé)</option>
+        <option value="semi-unlock">⚠️ Semi-unlock</option>
+        <option value="locked">🔒 Verrouillé opérateur</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Statut iCloud / MDM</label>
+      <select id="icloud_status">
+        <option value="clean">✅ iCloud clean</option>
+        <option value="unknown">❓ Non vérifié</option>
+        <option value="mdm">🚫 MDM actif</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">◆ Appareil cible</div>
+    <div class="field">
+      <label>Prix de l'appareil cible (USD $)</label>
+      <input type="number" id="target_price" placeholder="Ex: 1199" min="0">
+    </div>
+  </div>
+  <button class="btn-calc" onclick="calculateTradeIn()">Calculer Trade-In →</button>
+</div>
+
+<!-- OPPORTUNITY -->
+<div class="form-wrap" id="form-opportunity" style="display:none">
+  <div class="section">
+    <div class="section-title">◆ Appareil en question</div>
+    <div class="field">
+      <label>Modèle iPhone</label>
+      <select id="opp_model_select" onchange="onOppModelChange()">
+        <option value="">— Sélectionner un modèle —</option>
+        <option value="XR">iPhone XR</option>
+        <option value="11">iPhone 11</option>
+        <option value="11Pro">iPhone 11 Pro</option>
+        <option value="11ProMax">iPhone 11 Pro Max</option>
+        <option value="12">iPhone 12</option>
+        <option value="12Pro">iPhone 12 Pro</option>
+        <option value="12ProMax">iPhone 12 Pro Max</option>
+        <option value="13">iPhone 13</option>
+        <option value="13Pro">iPhone 13 Pro</option>
+        <option value="13ProMax">iPhone 13 Pro Max</option>
+        <option value="14">iPhone 14</option>
+        <option value="14Plus">iPhone 14 Plus</option>
+        <option value="14Pro">iPhone 14 Pro</option>
+        <option value="14ProMax">iPhone 14 Pro Max</option>
+        <option value="15">iPhone 15</option>
+        <option value="15Plus">iPhone 15 Plus</option>
+        <option value="15Pro">iPhone 15 Pro</option>
+        <option value="15ProMax">iPhone 15 Pro Max</option>
+        <option value="16">iPhone 16</option>
+        <option value="16Plus">iPhone 16 Plus</option>
+        <option value="16Pro">iPhone 16 Pro</option>
+        <option value="16ProMax">iPhone 16 Pro Max</option>
+        <option value="17">iPhone 17</option>
+        <option value="17Air">iPhone 17 Air</option>
+        <option value="17Pro">iPhone 17 Pro</option>
+        <option value="17ProMax">iPhone 17 Pro Max</option>
+      </select>
+    </div>
+    <div class="field" id="opp-storage-field" style="display:none">
+      <label>Stockage</label>
+      <select id="opp_storage_select" onchange="onOppStorageChange()">
+        <option value="">— Sélectionner —</option>
+      </select>
+    </div>
+    <div class="field" id="opp-dbprice-field" style="display:none">
+      <label>Valeur marché DB <span class="auto-badge">● AUTO</span></label>
+      <input type="number" id="opp_db_price" placeholder="—" min="0">
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">◆ Investissement</div>
+    <div class="field"><label>Prix d'achat demandé (USD $)</label><input type="number" id="purchase_price" placeholder="Ex: 300" min="0"></div>
+    <div class="field"><label>Coût de réparation estimé (USD $)</label><input type="number" id="repair_cost" placeholder="Ex: 120" min="0"></div>
+    <div class="field"><label>Prix de revente visé (USD $) <span id="opp-resale-badge" class="auto-badge" style="display:none">● DB</span></label><input type="number" id="resale_value" placeholder="Ex: 550" min="0"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">◆ État physique</div>
+    <div class="toggle-grid">
+      <div class="toggle-item" onclick="tog(this,'opp_screen','danger')"><span class="toggle-label">Écran endommagé</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'opp_camera','danger')"><span class="toggle-label">Caméra endommagée</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'opp_back','danger')"><span class="toggle-label">Dos endommagé</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'opp_water','danger')"><span class="toggle-label">Dégât d'eau</span><div class="toggle-dot"></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">⚠️ Problèmes spéciaux</div>
+    <div class="toggle-grid">
+      <div class="toggle-item" onclick="tog(this,'opp_faceid','warn')"><span class="toggle-label">Face ID cassé</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'opp_touchid','warn')"><span class="toggle-label">Touch ID cassé</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'opp_chargeport','warn')"><span class="toggle-label">Port de charge</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'opp_speaker','warn')"><span class="toggle-label">Haut-parleur</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'opp_motherboard','danger')"><span class="toggle-label">Carte mère 🚫</span><div class="toggle-dot"></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">◆ Historique & réseau</div>
+    <div class="toggle-grid" style="margin-bottom:12px">
+      <div class="toggle-item" onclick="tog(this,'opp_opened','danger')"><span class="toggle-label">Appareil ouvert</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'opp_batreplaced','danger')"><span class="toggle-label">Batterie remplacée</span><div class="toggle-dot"></div></div>
+    </div>
+    <div style="font-size:11px;font-family:var(--mono);color:var(--accent2);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;margin-top:4px;">🔩 Pièces non-originales</div>
+    <div class="toggle-grid" style="margin-bottom:12px">
+      <div class="toggle-item" onclick="tog(this,'opp_part_screen','warn')"><span class="toggle-label">Écran non-original</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'opp_part_battery','warn')"><span class="toggle-label">Batterie non-originale</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'opp_part_camera','warn')"><span class="toggle-label">Caméra non-originale</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'opp_part_back','warn')"><span class="toggle-label">Vitre arrière non-orig.</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'opp_part_charging','warn')"><span class="toggle-label">Port charge non-orig.</span><div class="toggle-dot"></div></div>
+      <div class="toggle-item" onclick="tog(this,'opp_part_faceid','warn')"><span class="toggle-label">Face ID non-original</span><div class="toggle-dot"></div></div>
+    </div>
+    <div class="field">
+      <label>Statut réseau</label>
+      <select id="opp_network_status">
+        <option value="clean">✅ Clean (déverrouillé)</option>
+        <option value="semi-unlock">⚠️ Semi-unlock</option>
+        <option value="locked">🔒 Verrouillé opérateur</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Statut iCloud / MDM</label>
+      <select id="opp_icloud_status">
+        <option value="clean">✅ iCloud clean</option>
+        <option value="unknown">❓ Non vérifié</option>
+        <option value="mdm">🚫 MDM actif</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">◆ Raison de vente</div>
+    <div class="field">
+      <label>Pourquoi le vendeur vend-il ?</label>
+      <select id="opp_reason">
+        <option value="upgrade">📱 Upgrade vers nouveau modèle</option>
+        <option value="broken">🔧 Appareil cassé / problème</option>
+        <option value="money">💵 Besoin d'argent urgent</option>
+        <option value="gift">🎁 Reçu en cadeau (doublon)</option>
+        <option value="unknown">❓ Raison inconnue</option>
+        <option value="suspicious">🚨 Raison suspecte</option>
+      </select>
+    </div>
+  </div>
+
+  <button class="btn-calc" onclick="calculateOpportunity()">Analyser Opportunité →</button>
+</div>
+
+<div id="result-panel"></div>
+<footer>iDevise v2 — Algorithme Trade-In & Opportunité</footer>
+
+<script>
+const PRICE_DB = {
+  'XR':       {'64':203,'128':238},
+  '11':       {'64':273,'128':300},
+  '11Pro':    {'64':335},
+  '11ProMax': {'64':350,'256':375},
+  '12':       {'64':315,'128':390},
+  '12Pro':    {'128':440},
+  '12ProMax': {'128':475},
+  '13':       {'128':408},
+  '13Pro':    {'128':513,'256':535},
+  '13ProMax': {'128':565,'256':603},
+  '14':       {'128':518},
+  '14Plus':   {'128':585},
+  '14Pro':    {'128':638,'256':693},
+  '14ProMax': {'128':765,'256':823},
+  '15':       {'128':640},
+  '15Plus':   {'128':698},
+  '15Pro':    {'128':813,'256':868},
+  '15ProMax': {'256':938},
+  '16':       {'128':875,'256':950},
+  '16Plus':   {'128':950},
+  '16Pro':    {'128':1025,'256':985},
+  '16ProMax': {'256':1170},
+  '17':       {'256':989},
+  '17Air':    {'256':1250},
+  '17Pro':    {'256':1500},
+  '17ProMax': {'256':1700,'512':1900,'1024':1990},
+};
+const STORAGE_LABELS = {'64':'64 GB','128':'128 GB','256':'256 GB','512':'512 GB','1024':'1 TB'};
+
+const flags = {};
+
+function tog(el, key, variant) {
+  const cls = 'active-' + variant;
+  const isOn = el.classList.contains(cls);
+  el.classList.toggle(cls, !isOn);
+  flags[key] = !isOn;
+}
+
+function switchMode(m) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active',
+    (m==='tradein'&&i===0)||(m==='opportunity'&&i===1)));
+  document.getElementById('form-tradein').style.display    = m==='tradein'    ? 'block' : 'none';
+  document.getElementById('form-opportunity').style.display= m==='opportunity'? 'block' : 'none';
+  document.getElementById('result-panel').style.display    = 'none';
+}
+
+function onOppModelChange() {
+  const model = document.getElementById('opp_model_select').value;
+  const sf = document.getElementById('opp-storage-field');
+  const ss = document.getElementById('opp_storage_select');
+  const pf = document.getElementById('opp-dbprice-field');
+  document.getElementById('opp_db_price').value = '';
+  document.getElementById('opp-resale-badge').style.display = 'none';
+  ss.innerHTML = '<option value="">— Sélectionner —</option>';
+  if (!model || !PRICE_DB[model]) { sf.style.display='none'; pf.style.display='none'; return; }
+  Object.keys(PRICE_DB[model]).forEach(s => {
+    const o = document.createElement('option');
+    o.value = s; o.textContent = STORAGE_LABELS[s] || s+' GB';
+    ss.appendChild(o);
+  });
+  sf.style.display = 'block';
+  const opts = Object.keys(PRICE_DB[model]);
+  if (opts.length === 1) { ss.value = opts[0]; onOppStorageChange(); }
+}
+
+function onOppStorageChange() {
+  const model = document.getElementById('opp_model_select').value;
+  const storage = document.getElementById('opp_storage_select').value;
+  const pf = document.getElementById('opp-dbprice-field');
+  const badge = document.getElementById('opp-resale-badge');
+  if (model && storage && PRICE_DB[model]?.[storage]) {
+    const dbPrice = PRICE_DB[model][storage];
+    document.getElementById('opp_db_price').value = dbPrice;
+    // Auto-fill resale with DB price if empty
+    const resaleField = document.getElementById('resale_value');
+    if (!resaleField.value) { resaleField.value = dbPrice; badge.style.display='inline'; }
+    pf.style.display = 'block';
+  } else { pf.style.display='none'; }
+}
+
+function onModelChange() {
+  const model = document.getElementById('model_select').value;
+  const sf = document.getElementById('storage-field');
+  const ss = document.getElementById('storage_select');
+  const badge = document.getElementById('auto-badge');
+  document.getElementById('base_value').value = '';
+  badge.style.display = 'none';
+  ss.innerHTML = '<option value="">— Sélectionner —</option>';
+  if (!model || !PRICE_DB[model]) { sf.style.display='none'; return; }
+  Object.keys(PRICE_DB[model]).forEach(s => {
+    const o = document.createElement('option');
+    o.value = s; o.textContent = STORAGE_LABELS[s] || s+' GB';
+    ss.appendChild(o);
+  });
+  sf.style.display = 'block';
+  const opts = Object.keys(PRICE_DB[model]);
+  if (opts.length === 1) { ss.value = opts[0]; onStorageChange(); }
+}
+
+function onStorageChange() {
+  const model = document.getElementById('model_select').value;
+  const storage = document.getElementById('storage_select').value;
+  const badge = document.getElementById('auto-badge');
+  if (model && storage && PRICE_DB[model]?.[storage]) {
+    document.getElementById('base_value').value = PRICE_DB[model][storage];
+    badge.style.display = 'inline';
+  } else { badge.style.display = 'none'; }
+}
+
+function fmt(n) { return '$' + Math.round(n).toLocaleString('fr-CA'); }
+function fmtPct(n) { return (n*100).toFixed(1)+'%'; }
+
+function batMult(b) {
+  if (b>=95) return 1.00; if (b>=90) return 0.95; if (b>=85) return 0.90;
+  if (b>=80) return 0.85; if (b>=70) return 0.78; if (b>=50) return 0.70;
+  return 0.55;
+}
+
+function calculateTradeIn() {
+  const base = parseFloat(document.getElementById('base_value').value)||0;
+  const target = parseFloat(document.getElementById('target_price').value)||0;
+  const battery = parseInt(document.getElementById('battery').value);
+  const network = document.getElementById('network_status').value;
+  const icloud = document.getElementById('icloud_status').value;
+  if (!base) { alert('Entre la valeur marché de base.'); return; }
+
+  let value = base;
+  const breakdown = [];
+
+  value *= 0.75;
+  breakdown.push({label:'Déduction utilisation (×0.75)', val:-(base-value)});
+
+  const bm = batMult(battery); const bb = value; value *= bm;
+  breakdown.push({label:`Batterie ${battery}% (×${bm})`, val:-(bb-value)});
+
+  [['screen_damage','Écran endommagé'],['camera_damage','Caméra endommagée'],['back_damage','Dos endommagé']].forEach(([k,l])=>{
+    if (flags[k]) { const b=value; value*=0.90; breakdown.push({label:`${l} (×0.90)`,val:-(b-value)}); }
+  });
+
+  let autoReject=false, rejectReason='';
+  if (flags.face_id)    { const b=value; value*=0.70; breakdown.push({label:'Face ID cassé (×0.70)',val:-(b-value)}); }
+  if (flags.touch_id)   { const b=value; value*=0.80; breakdown.push({label:'Touch ID cassé (×0.80)',val:-(b-value)}); }
+  if (flags.charge_port){ const b=value; value*=0.88; breakdown.push({label:'Port de charge (×0.88)',val:-(b-value)}); }
+  if (flags.speaker)    { const b=value; value*=0.90; breakdown.push({label:'Haut-parleur (×0.90)',val:-(b-value)}); }
+  if (flags.motherboard){ autoReject=true; rejectReason='Carte mère défectueuse'; const b=value; value*=0.40; breakdown.push({label:'Carte mère (×0.40)',val:-(b-value)}); }
+  if (flags.is_opened)  { const b=value; value*=0.90; breakdown.push({label:'Appareil ouvert (×0.90)',val:-(b-value)}); }
+  if (flags.bat_replaced){ const b=value; value*=0.90; breakdown.push({label:'Batterie remplacée (×0.90)',val:-(b-value)}); }
+
+  // Pièces non-originales
+  if (flags.part_screen)   { const b=value; value*=0.88; breakdown.push({label:'Écran non-original (×0.88)',val:-(b-value)}); }
+  if (flags.part_battery)  { const b=value; value*=0.92; breakdown.push({label:'Batterie non-originale (×0.92)',val:-(b-value)}); }
+  if (flags.part_camera)   { const b=value; value*=0.88; breakdown.push({label:'Caméra non-originale (×0.88)',val:-(b-value)}); }
+  if (flags.part_back)     { const b=value; value*=0.93; breakdown.push({label:'Vitre arrière non-orig. (×0.93)',val:-(b-value)}); }
+  if (flags.part_charging) { const b=value; value*=0.92; breakdown.push({label:'Port charge non-orig. (×0.92)',val:-(b-value)}); }
+  if (flags.part_faceid)   { const b=value; value*=0.85; breakdown.push({label:'Face ID non-original (×0.85)',val:-(b-value)}); }
+
+  let R=1.00, riskScore=0;
+  const riskItems=[];
+  if (flags.is_opened)        { R=Math.min(R,0.92); riskScore+=10; riskItems.push('Appareil ouvert'); }
+  if (battery<80)             { R=Math.min(R,0.85); riskScore+=10; riskItems.push('Batterie < 80%'); }
+  if (battery<70)             { R=Math.min(R,0.78); riskScore+=10; riskItems.push('Batterie < 70%'); }
+  if (network==='semi-unlock'){ R=Math.min(R,0.82); riskScore+=20; riskItems.push('Réseau semi-unlock'); }
+  if (network==='locked')     { R=Math.min(R,0.75); riskScore+=25; riskItems.push('Réseau verrouillé'); }
+  if (flags.water_damage)     { R=Math.min(R,0.70); riskScore+=30; riskItems.push("Dégât d'eau"); }
+  if (flags.face_id)          { riskScore+=30; }
+  if (flags.bat_replaced)     { riskScore+=10; }
+  if (icloud==='unknown')     { R=Math.min(R,0.60); riskScore+=25; riskItems.push('iCloud non vérifié'); }
+  if (icloud==='mdm')         { autoReject=true; rejectReason='MDM actif'; riskScore=100; }
+
+  const issues = ['screen_damage','camera_damage','back_damage','face_id','touch_id','water_damage','motherboard'].filter(k=>flags[k]).length;
+  if (issues>=3) { R=Math.min(R,0.65); riskScore=Math.min(riskScore+15,100); riskItems.push('Multiples problèmes'); }
+  if (riskScore>=70) autoReject=true;
+
+  if (R<1.00) { const b=value; value*=R; breakdown.push({label:`Coefficient de risque (×${R.toFixed(2)})`,val:-(b-value)}); }
+  value = Math.round(value/10)*10;
+  value = Math.max(0,value);
+  const toPay = target>0 ? Math.max(0,target-value) : null;
+
+  const rc = riskScore<30 ? 'var(--good)' : riskScore<60 ? 'var(--warn)' : 'var(--danger)';
+  const vc = autoReject ? 'danger' : value>=base*0.55 ? 'good' : value>=base*0.35 ? 'warn' : 'danger';
+
+  const bdHtml = breakdown.map(b=>`<div class="bd-row"><span>${b.label}</span><span class="bd-val neg">${fmt(b.val)}</span></div>`).join('');
+  const toPayHtml = toPay!==null ? `
+    <div class="result-grid">
+      <div class="result-card"><div class="rc-label">Valeur Trade-In</div><div class="rc-value" style="color:var(--accent2)">${fmt(value)}</div></div>
+      <div class="result-card"><div class="rc-label">Client paie en +</div><div class="rc-value" style="color:var(--warn)">${fmt(toPay)}</div></div>
+    </div>` : `<div class="result-grid"><div class="result-card" style="grid-column:1/-1"><div class="rc-label">Valeur Trade-In</div><div class="rc-value" style="color:var(--accent2)">${fmt(value)}</div></div></div>`;
+
+  const alertHtml = (autoReject||riskScore>=70) && riskItems.length ? `<div class="alerts"><div class="alerts-title">🚫 Alertes critiques</div>${riskItems.map(r=>'• '+r).join('<br>')}</div>` : '';
+
+  const p = document.getElementById('result-panel');
+  p.innerHTML = `
+    <div class="result-main">
+      <div class="result-label">Valeur estimée de l'appareil</div>
+      <div class="result-value ${vc}">${fmt(value)}</div>
+      ${autoReject ? `<div class="decision-badge badge-reject" style="margin-top:12px">🚫 REJECT — ${rejectReason}</div>` : ''}
+    </div>
+    ${toPayHtml}
+    <div class="risk-bar-wrap">
+      <div class="risk-bar-header"><span class="risk-bar-title">Score de risque</span><span style="font-family:var(--mono);font-size:14px;font-weight:600;color:${rc}">${riskScore}/100</span></div>
+      <div class="risk-track"><div class="risk-fill" style="width:${Math.min(riskScore,100)}%;background:${rc}"></div></div>
+    </div>
+    <div class="breakdown">
+      <div class="breakdown-title">Détail des déductions</div>
+      <div class="bd-row"><span>Valeur de base</span><span class="bd-val pos">${fmt(base)}</span></div>
+      ${bdHtml}
+      <div class="bd-row" style="font-weight:700;color:var(--text)"><span>Valeur finale</span><span class="bd-val">${fmt(value)}</span></div>
+    </div>
+    ${alertHtml}`;
+  p.style.display='block';
+  p.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function calculateOpportunity() {
+  const p = parseFloat(document.getElementById('purchase_price').value)||0;
+  const r = parseFloat(document.getElementById('repair_cost').value)||0;
+  const s = parseFloat(document.getElementById('resale_value').value)||0;
+  if (!p||!s) { alert("Entre au moins le prix d'achat et la revente."); return; }
+
+  const opp_network = document.getElementById('opp_network_status').value;
+  const opp_icloud  = document.getElementById('opp_icloud_status').value;
+  const opp_reason  = document.getElementById('opp_reason').value;
+  const dbPrice     = parseFloat(document.getElementById('opp_db_price').value)||0;
+
+  const totalCost = p+r, profit = s-totalCost;
+  const roi = profit/totalCost;
+
+  const reasonLabels = {
+    upgrade:    {label:'Upgrade modèle',         icon:'📱', risk:0},
+    broken:     {label:'Appareil cassé',          icon:'🔧', risk:10},
+    money:      {label:"Besoin urgent d'argent",  icon:'💵', risk:5},
+    gift:       {label:'Reçu en cadeau',          icon:'🎁', risk:0},
+    unknown:    {label:'Raison inconnue',          icon:'❓', risk:15},
+    suspicious: {label:'Raison suspecte',          icon:'🚨', risk:30},
+  };
+  const reasonInfo = reasonLabels[opp_reason] || reasonLabels.unknown;
+
+  let riskScore = reasonInfo.risk;
+  const riskItems = [];
+
+  // État physique
+  if (flags.opp_screen)     { riskScore+=10; riskItems.push('Écran endommagé'); }
+  if (flags.opp_camera)     { riskScore+=8;  riskItems.push('Caméra endommagée'); }
+  if (flags.opp_back)       { riskScore+=5;  riskItems.push('Dos endommagé'); }
+  if (flags.opp_water)      { riskScore+=30; riskItems.push("Dégât d'eau"); }
+  // Problèmes spéciaux
+  if (flags.opp_faceid)     { riskScore+=25; riskItems.push('Face ID cassé'); }
+  if (flags.opp_touchid)    { riskScore+=15; riskItems.push('Touch ID cassé'); }
+  if (flags.opp_chargeport) { riskScore+=10; riskItems.push('Port de charge'); }
+  if (flags.opp_speaker)    { riskScore+=8;  riskItems.push('Haut-parleur'); }
+  if (flags.opp_motherboard){ riskScore+=50; riskItems.push('Carte mère'); }
+  // Historique
+  if (flags.opp_opened)     { riskScore+=10; riskItems.push('Appareil ouvert'); }
+  if (flags.opp_batreplaced){ riskScore+=8;  riskItems.push('Batterie remplacée'); }
+  // Pièces non-originales
+  if (flags.opp_part_screen)   { riskScore+=12; riskItems.push('Écran non-original'); }
+  if (flags.opp_part_battery)  { riskScore+=8;  riskItems.push('Batterie non-originale'); }
+  if (flags.opp_part_camera)   { riskScore+=12; riskItems.push('Caméra non-originale'); }
+  if (flags.opp_part_back)     { riskScore+=6;  riskItems.push('Vitre arrière non-orig.'); }
+  if (flags.opp_part_charging) { riskScore+=8;  riskItems.push('Port charge non-orig.'); }
+  if (flags.opp_part_faceid)   { riskScore+=15; riskItems.push('Face ID non-original'); }
+  // Réseau / iCloud
+  if (opp_network==='semi-unlock') { riskScore+=20; riskItems.push('Réseau semi-unlock'); }
+  if (opp_network==='locked')      { riskScore+=25; riskItems.push('Réseau verrouillé'); }
+  if (opp_icloud==='unknown')      { riskScore+=25; riskItems.push('iCloud non vérifié'); }
+  if (opp_icloud==='mdm')          { riskScore+=50; riskItems.push('MDM actif'); }
+  if (opp_reason==='suspicious')   { riskItems.unshift('⚠️ Raison de vente suspecte'); }
+
+  riskScore = Math.min(riskScore, 100);
+
+  // Comparaison avec la DB
+  let dbCompareHtml = '';
+  if (dbPrice > 0) {
+    const pctOfDB = (p / dbPrice * 100).toFixed(0);
+    const diff = dbPrice - p;
+    const dbColor = diff >= 0 ? 'var(--good)' : 'var(--danger)';
+    dbCompareHtml = `
+      <div class="breakdown">
+        <div class="breakdown-title">Analyse vs Base de Données</div>
+        <div class="bd-row"><span>Valeur marché DB</span><span class="bd-val pos">${fmt(dbPrice)}</span></div>
+        <div class="bd-row"><span>Prix d'achat demandé</span><span class="bd-val">${fmt(p)}</span></div>
+        <div class="bd-row"><span>% du prix marché</span><span class="bd-val" style="color:${pctOfDB<=75?'var(--good)':pctOfDB<=90?'var(--accent)':'var(--warn)'}">${pctOfDB}% de la DB</span></div>
+        <div class="bd-row"><span>Marge d'achat</span><span class="bd-val" style="color:${dbColor}">${diff>=0?'+':''}${fmt(diff)}</span></div>
+      </div>`;
+  }
+
+  // Décision
+  let decision, badge, emoji;
+  const forceReject = flags.opp_motherboard || opp_icloud==='mdm' || riskScore>=70;
+  if (forceReject || roi<0.20)  { decision='REJECT';    badge='badge-reject';    emoji='🚫'; }
+  else if (roi<0.30)            { decision='RISQUÉ';    badge='badge-risky';     emoji='⚠️'; }
+  else if (roi<0.50)            { decision='BON';       badge='badge-good';      emoji='✅'; }
+  else if (roi<0.80)            { decision='TRÈS BON';  badge='badge-verygood';  emoji='🔥'; }
+  else                          { decision='EXCELLENT'; badge='badge-excellent'; emoji='💎'; }
+
+  const rc = riskScore<30?'var(--good)':riskScore<60?'var(--warn)':'var(--danger)';
+  const alertHtml = riskItems.length ? `<div class="alerts"><div class="alerts-title">⚠️ Facteurs de risque identifiés</div>${riskItems.map(r=>'• '+r).join('<br>')}</div>` : '';
+
+  const panel = document.getElementById('result-panel');
+  panel.innerHTML = `
+    <div class="result-main">
+      <div class="result-label">ROI estimé</div>
+      <div class="result-value ${roi>=0.3?'good':roi>=0.2?'warn':'danger'}">${fmtPct(roi)}</div>
+      <div class="decision-badge ${badge}" style="margin-top:12px">${emoji} ${decision}</div>
+    </div>
+    <div class="result-grid">
+      <div class="result-card"><div class="rc-label">Coût total</div><div class="rc-value" style="color:var(--danger)">${fmt(totalCost)}</div></div>
+      <div class="result-card"><div class="rc-label">Profit net</div><div class="rc-value" style="color:${profit>=0?'var(--good)':'var(--danger)'}">${fmt(profit)}</div></div>
+    </div>
+    <div class="risk-bar-wrap">
+      <div class="risk-bar-header"><span class="risk-bar-title">Score de risque</span><span style="font-family:var(--mono);font-size:14px;font-weight:600;color:${rc}">${riskScore}/100</span></div>
+      <div class="risk-track"><div class="risk-fill" style="width:${riskScore}%;background:${rc}"></div></div>
+    </div>
+    ${dbCompareHtml}
+    <div class="breakdown">
+      <div class="breakdown-title">Détail financier</div>
+      <div class="bd-row"><span>Prix d'achat</span><span class="bd-val neg">${fmt(p)}</span></div>
+      <div class="bd-row"><span>Réparation estimée</span><span class="bd-val neg">${fmt(r)}</span></div>
+      <div class="bd-row"><span>Investissement total</span><span class="bd-val">${fmt(totalCost)}</span></div>
+      <div class="bd-row"><span>Prix de revente visé</span><span class="bd-val pos">${fmt(s)}</span></div>
+      <div class="bd-row" style="font-weight:700;color:var(--text)"><span>Profit net</span><span class="bd-val ${profit>=0?'pos':'neg'}">${fmt(profit)}</span></div>
+    </div>
+    <div class="breakdown">
+      <div class="breakdown-title">Contexte de l'opportunité</div>
+      <div class="bd-row"><span>Raison de vente</span><span class="bd-val">${reasonInfo.icon} ${reasonInfo.label}</span></div>
+      <div class="bd-row"><span>Réseau</span><span class="bd-val">${opp_network==='clean'?'✅ Clean':opp_network==='semi-unlock'?'⚠️ Semi-unlock':'🔒 Verrouillé'}</span></div>
+      <div class="bd-row"><span>iCloud / MDM</span><span class="bd-val">${opp_icloud==='clean'?'✅ Clean':opp_icloud==='unknown'?'❓ Non vérifié':'🚫 MDM actif'}</span></div>
+    </div>
+    ${alertHtml}`;
+  panel.style.display='block';
+  panel.scrollIntoView({behavior:'smooth',block:'start'});
+}
+</script>
+</body>
+</html>
